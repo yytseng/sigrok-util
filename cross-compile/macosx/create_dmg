@@ -21,13 +21,13 @@
 set -e
 
 # The path where the installed sigrok libraries/binaries are located.
-PREFIX=$HOME/sr_macosx
+PREFIX=$HOME/sr_macosx_cmake
 
 # The path where to download files to and where to build packages.
-BUILDDIR=./build_app
+BUILDDIR=./build_app_cmake
 
 # We use Qt 5.5 in order to remain compatible with more versions of Mac OS X.
-QTVER=qt@5.5
+QTVER=qt
 
 # Path to Qt5 binaries.
 QTBINDIR=`brew list $QTVER | grep bin | head -n 1 | xargs dirname`
