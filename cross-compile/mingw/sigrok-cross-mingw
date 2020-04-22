@@ -27,10 +27,10 @@ TARGET="i686"
 MXE=$HOME/mxe-git
 
 # The base path prefix where the cross-compiled packages will be installed.
-PREFIXBASE=$HOME/sr_mingw
+PREFIXBASE=$HOME/sr_mingw_cmake
 
 # The base path prefix where to download files to and where to build packages.
-BUILDBASE=./build
+BUILDBASE=./build_cmake
 
 # Edit this to control verbose build output.
 # V="V=1 VERBOSE=1"
@@ -46,9 +46,9 @@ DEBUG=0
 # -----------------------------------------------------------------------------
 
 WGET="wget -c --quiet"
-GIT_CLONE="git clone --depth=1"
+GIT_CLONE="git clone"
 
-REPO_BASE="git://sigrok.org"
+REPO_BASE="https://github.com/uwehermann"
 
 # Construct the build and install directory pathnames.
 if [ $TARGET = "i686" ]; then
@@ -79,6 +79,9 @@ CMAKE="$TOOLCHAIN_TRIPLET-cmake"
 P="$PREFIX/lib/pkgconfig"
 P2="$MXE/usr/$TOOLCHAIN_TRIPLET/lib/pkgconfig"
 C="--host=$TOOLCHAIN_TRIPLET --prefix=$PREFIX CPPFLAGS=-D__printf__=__gnu_printf__"
+CM="$CM -DCMAKE_INSTALL_PREFIX=$PREFIX"
+CM="$CM -DCMAKE_FIND_ROOT_PATH=$PREFIX/lib/cmake;$MXE/usr/$TOOLCHAIN_TRIPLET"
+CM="$CM -DBUILD_SHARED_LIBS=n"
 L="--disable-shared --enable-static"
 
 if [ $TARGET = "i686" ]; then
@@ -169,8 +172,8 @@ cd ..
 # libserialport
 $GIT_CLONE $REPO_BASE/libserialport
 cd libserialport
-./autogen.sh
-./configure $C $L
+git checkout cmake
+$CMAKE $CM .
 make $PARALLEL $V
 make install $V
 cd ..
@@ -178,8 +181,8 @@ cd ..
 # libsigrok
 $GIT_CLONE $REPO_BASE/libsigrok
 cd libsigrok
-./autogen.sh
-./configure $C $L
+git checkout cmake
+$CMAKE $CM .
 make $PARALLEL $V
 make install $V
 cd ..
@@ -187,8 +190,8 @@ cd ..
 # libsigrokdecode
 $GIT_CLONE $REPO_BASE/libsigrokdecode
 cd libsigrokdecode
-./autogen.sh
-./configure $C $L
+git checkout cmake
+$CMAKE $CM .
 make $PARALLEL $V
 make install $V
 cd ..
@@ -196,14 +199,14 @@ cd ..
 # sigrok-firmware
 $GIT_CLONE $REPO_BASE/sigrok-firmware
 cd sigrok-firmware
-./autogen.sh
+git checkout cmake
 # Nothing gets cross-compiled here, we just need 'make install' basically.
-./configure --prefix=$PREFIX
+$CMAKE $CM .
 make install $V
 cd ..
 
 # sigrok-firmware-fx2lafw
-$GIT_CLONE $REPO_BASE/sigrok-firmware-fx2lafw
+$GIT_CLONE https://github.com/sigrokproject/sigrok-firmware-fx2lafw
 cd sigrok-firmware-fx2lafw
 ./autogen.sh
 # We're building the fx2lafw firmware on the host, no need to cross-compile.
@@ -213,7 +216,7 @@ make install $V
 cd ..
 
 # sigrok-dumps
-$GIT_CLONE $REPO_BASE/sigrok-dumps
+$GIT_CLONE https://github.com/sigrokproject/sigrok-dumps
 cd sigrok-dumps
 make install DESTDIR=$PREFIX/share/sigrok-dumps $V
 cd ..
@@ -221,8 +224,8 @@ cd ..
 # sigrok-cli
 $GIT_CLONE $REPO_BASE/sigrok-cli
 cd sigrok-cli
-./autogen.sh
-./configure $C
+git checkout cmake
+$CMAKE $CM .
 make $PARALLEL $V
 make install $V
 makensis contrib/sigrok-cli_cross.nsi
@@ -231,15 +234,15 @@ cd ..
 # PulseView
 $GIT_CLONE $REPO_BASE/pulseview
 cd pulseview
+git checkout cmake
 cp ../../FileAssociation.nsh contrib
-$CMAKE \
-	-DCMAKE_INSTALL_PREFIX:PATH=$PREFIX \
-	-DCMAKE_BUILD_TYPE=$BUILD_TYPE \
-	-DDISABLE_WERROR=y \
-	-DENABLE_TESTS=y \
+$CMAKE $CM \
+	-DCMAKE_BUILD_TYPE=$BUILD_TYPE
+	# -DDISABLE_WERROR=y \
+	# -DENABLE_TESTS=y \
 	.
 make $PARALLEL $V
-make manual
+# make manual
 if [ $DEBUG = 1 ]; then
 	make install $V
 else
