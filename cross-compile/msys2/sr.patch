@@ -1,0 +1,24 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 7c9a9e7aa..35d9124e7 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -228,7 +228,7 @@ set(LIBGPIB_WORKAROUND_MODULE_NAME "libgpib")
+ set(LIBBLUEZ_WORKAROUND_MODULE_NAME "bluez")
+ foreach(p GLIB;ZIP;GIO;USB;FTDI;HIDAPI;REVISA;SERIALPORT;GPIB;BLUEZ)
+ 	sr_pkgconfig_lib(LIB${p})
+-	if(LIB${p}_FOUND)
++	if(LIB${p}_FOUND AND NOT ${p} STREQUAL "ZIP")
+ 		string(APPEND SR_PKGLIBS "${LIB${p}_WORKAROUND_MODULE_NAME} ")
+ 	endif()
+ endforeach()
+diff --git a/libsigrok.pc.in b/libsigrok.pc.in
+index 5d0f634d1..09fceb44d 100644
+--- a/libsigrok.pc.in
++++ b/libsigrok.pc.in
+@@ -10,5 +10,5 @@ Requires: glib-2.0
+ Requires.private: @SR_PKGLIBS@
+ Version: @PROJECT_VERSION@
+ Libs: -L${libdir} -lsigrok
+-Libs.private: @SR_EXTRA_LIBS@
++Libs.private: @SR_EXTRA_LIBS@ -lzip
+ Cflags: -I${includedir}
