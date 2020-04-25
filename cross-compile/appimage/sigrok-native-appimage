@@ -8,7 +8,7 @@
 # Bundle PulseView/sigrok-cli (and deps) as an AppImage for x86_64/i386 Linux.
 # Note: This assumes the full sigrok stack has been installed into $PREFIX.
 
-PREFIX=$HOME/sr
+PREFIX=$HOME/sr_cmake
 
 APPIMAGEKIT_OUTDIR=$HOME/AppImageKit/build/out
 

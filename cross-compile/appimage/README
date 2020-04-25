@@ -9,15 +9,17 @@ AppImage is a bundle format for Linux applications that allows the user to
 download an application, make it executable, and run.
 No need to install. No system libraries or system preferences are altered.
 
-For more information on AppImage, please see
-http://appimage.org/
+For more information on AppImage, please see:
+
+ http://appimage.org
 
 
 Status
 ------
 
 Working AppImages (stable releases and nightly builds) are provided here:
-https://sigrok.org/wiki/Downloads
+
+ https://sigrok.org/wiki/Downloads
 
 
 Requirements
