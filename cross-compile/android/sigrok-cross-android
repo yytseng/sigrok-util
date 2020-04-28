@@ -2,7 +2,7 @@
 ##
 ## This file is part of the sigrok-util project.
 ##
-## Copyright (C) 2013-2015 Uwe Hermann <uwe@hermann-uwe.de>
+## Copyright (C) 2013-2020 Uwe Hermann <uwe@hermann-uwe.de>
 ## Copyright (C) 2013-2015 Marcus Comstedt <marcus@mc.pp.se>
 ##
 ## This program is free software; you can redistribute it and/or modify
@@ -40,10 +40,10 @@ TOOLCHAIN_TRIPLET=arm-linux-androideabi
 # TOOLCHAIN_TRIPLET=i686-linux-android
 
 # The path where the cross-compiled packages will be installed.
-PREFIX=$HOME/sr_android
+PREFIX=$HOME/sr_android_cmake
 
 # The path where to download files to and where to build packages.
-BUILDDIR=./build
+BUILDDIR=./build_cmake
 
 # Edit this to control verbose build output.
 # V="V=1 VERBOSE=1"
@@ -82,9 +82,9 @@ VER_AND_API=16    # Target Android API version
 SF_MIRROR=download.sourceforge.net
 
 WGET="wget -c --quiet"
-GIT_CLONE="git clone --depth=1"
+GIT_CLONE="git clone"
 
-REPO_BASE="git://sigrok.org"
+REPO_BASE="https://github.com/uwehermann"
 
 case "$TOOLCHAIN_TRIPLET" in
   arm*) TARGET_ARCH=armeabi;;
@@ -172,7 +172,8 @@ NDK_TOOLCHAIN_VERSION=`${TOOLCHAIN_TRIPLET}-gcc --version | head -1 | sed -e 's/
 
 # Define some helper variables.
 C="--host=$TOOLCHAIN_TRIPLET --prefix=$PREFIX"
-CM="-Wno-dev -DCMAKE_TOOLCHAIN_FILE=../android.toolchain.cmake -DANDROID_ABI=${TARGET_ARCH} -DCMAKE_INSTALL_PREFIX=${PREFIX}"
+CM="$CM -Wno-dev -DCMAKE_TOOLCHAIN_FILE=../android.toolchain.cmake -DANDROID_ABI=${TARGET_ARCH}"
+CM="$CM -DCMAKE_INSTALL_PREFIX=${PREFIX}"
 if [ -n "$STANDALONE_TOOLCHAIN" ]; then
   CM="$CM -DANDROID_STANDALONE_TOOLCHAIN=${STANDALONE_TOOLCHAIN}"
   if [ -d "${ANDROID_NDK}/sources/cxx-stl" ]; then
@@ -326,10 +327,10 @@ cd ..
 # libserialport
 $GIT_CLONE $REPO_BASE/libserialport
 cd libserialport
-./autogen.sh
+git checkout cmake
 mkdir build
 cd build
-../configure $C
+cmake $CM ..
 make $PARALLEL $V
 make install $V
 cd ../..
@@ -363,21 +364,25 @@ fi
 # libsigrok
 $GIT_CLONE $REPO_BASE/libsigrok
 cd libsigrok
-./autogen.sh
+git checkout cmake
 mkdir build
 cd build
-CPPFLAGS="$CPPFLAGS_STL" LDFLAGS="$LDFLAGS_STL" JAVAC="javac -source 1.6 -target 1.6" ../configure $C $BINDINGS_CONFIG --datadir=/sdcard
+# CPPFLAGS="$CPPFLAGS_STL" LDFLAGS="$LDFLAGS_STL" JAVAC="javac -source 1.6 -target 1.6" ../configure $C $BINDINGS_CONFIG --datadir=/sdcard
+# TODO: datadir
+JAVAC="javac -source 1.6 -target 1.6" cmake $CM -DCMAKE_CXX_FLAGS="$CPPFLAGS_STL" -DCMAKE_SHARED_LINKER_FLAGS="$LDFLAGS_STL" ..
 make $PARALLEL $V
-make datadir='$(datarootdir)' install $V
+# TODO
+# make datadir='$(datarootdir)' install $V
+make install $V
 cd ../..
 
 # libsigrokdecode
 $GIT_CLONE $REPO_BASE/libsigrokdecode
 cd libsigrokdecode
-./autogen.sh
+git checkout cmake
 mkdir build
 cd build
-../configure $C
+cmake $CM ..
 make $PARALLEL $V
 make install $V
 cd ../..
@@ -385,10 +390,10 @@ cd ../..
 # sigrok-firmware
 $GIT_CLONE $REPO_BASE/sigrok-firmware
 cd sigrok-firmware
-./autogen.sh
+git checkout cmake
 mkdir build
 cd build
-../configure $C
+cmake $CM ..
 make $PARALLEL $V
 make install $V
 cd ../..
@@ -403,10 +408,10 @@ cd ..
 # sigrok-cli
 $GIT_CLONE $REPO_BASE/sigrok-cli
 cd sigrok-cli
-./autogen.sh
+git checkout cmake
 mkdir build
 cd build
-../configure $C
+cmake $CM ..
 make $PARALLEL $V
 make install $V
 cd ../..
@@ -473,7 +478,7 @@ make install $V
 cd ..
 
 # sigrok-androidutils
-$GIT_CLONE $REPO_BASE/sigrok-androidutils
+$GIT_CLONE https://github.com/sigrokproject/sigrok-androidutils
 cd sigrok-androidutils
 ./autogen.sh
 ./configure $C --with-android-sdk="${ANDROID_SDK}" --with-android-platform=android-$VER_AND_API
@@ -487,9 +492,11 @@ find $PREFIX -iname "*.so" -exec ${TOOLCHAIN_TRIPLET}-strip -S {} \;
 # PulseView
 $GIT_CLONE $REPO_BASE/pulseview
 cd pulseview
+git checkout cmake
 patch -p1 < ../../pv_cmake_pkgconfig_fix.patch
 sed -i -e "s,\t\tandroid:versionName=.*$,\t\tandroid:versionName=\"`date -Iseconds`\"," android/AndroidManifest.xml
-cmake $CM -DENABLE_TESTS=y .
+# cmake $CM -DBUILD_TESTING=y .
+cmake $CM -DBUILD_TESTING=n .
 make $PARALLEL $V
 ${TOOLCHAIN_TRIPLET}-strip -S libs/$TARGET_ARCH/libpulseview.so
 cd android
