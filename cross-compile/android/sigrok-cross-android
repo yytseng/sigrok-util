@@ -24,26 +24,33 @@ set -e
 # The path where the NDK, SDK, and toolchains are located.
 ANDROID_PATH=$HOME/android
 
+VER_NDK=21b
+
 # The path where the Android NDK is located.
-ANDROID_NDK=$ANDROID_PATH/android-ndk-r10e
+ANDROID_NDK=$ANDROID_PATH/android-ndk-r$VER_NDK
 
 # The path where the Android SDK is located.
-ANDROID_SDK=$ANDROID_PATH/android-sdk-linux
+ANDROID_SDK=$ANDROID_PATH/android-sdk-linux_ndk_r21b
 
 # The path where your Android toolchain directory is located.
-TOOLCHAIN=$ANDROID_NDK/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86
-# TOOLCHAIN=$ANDROID_NDK/toolchains/x86-4.9/prebuilt/linux-x86
+# TOOLCHAIN=$ANDROID_NDK/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64
+TOOLCHAIN=$ANDROID_PATH/android-arm-toolchain_ndk_r21b
+# TOOLCHAIN=$ANDROID_PATH/android-aarch64-toolchain_ndk_r21b
+# TOOLCHAIN=$ANDROID_PATH/android-i686-toolchain_ndk_r21b
+# TOOLCHAIN=$ANDROID_PATH/android-x86_64-toolchain_ndk_r21b
 
 # Select which Android toolchain to use.
 # Don't forget to also adapt TOOLCHAIN above if you change TOOLCHAIN_TRIPLET!
 TOOLCHAIN_TRIPLET=arm-linux-androideabi
+# TOOLCHAIN_TRIPLET=aarch64-linux-android
 # TOOLCHAIN_TRIPLET=i686-linux-android
+# TOOLCHAIN_TRIPLET=x86_64-linux-android
 
 # The path where the cross-compiled packages will be installed.
-PREFIX=$HOME/sr_android_cmake
+PREFIX=$HOME/sr_android_cmake_ndk21test
 
 # The path where to download files to and where to build packages.
-BUILDDIR=./build_cmake
+BUILDDIR=./build_cmake_ndk21test
 
 # Edit this to control verbose build output.
 # V="V=1 VERBOSE=1"
@@ -59,22 +66,22 @@ VER_LIBICONV=1.14
 VER_GETTEXT=0.19.7
 VER_ZLIB=1.2.11
 VER_PCRE=8.38
-VER_LIBFFI=3.2.1
+VER_LIBFFI=3.3
 VER_GLIB=2.48.1
 VER_GLIB_SHORT=2.48
 VER_GLIBMM=2.48.1
 VER_GLIBMM_SHORT=2.48
 VER_LIBSIGCXX=2.9.2
 VER_LIBSIGCXX_SHORT=2.9
-VER_LIBZIP=1.1
+VER_LIBZIP=1.6.1
 VER_LIBFTDI1=1.2
-VER_LIBUSB=1.0.19
-VER_PYTHON=3.3.3
+VER_LIBUSB=1.0.23
+VER_PYTHON=3.8.2
 VER_BOOST=1.58.0
 VER_QT=5.6.0
 VER_QT_SHORT=5.6
 VER_SIGROK_FIRMWARE_FX2LAFW=0.1.6
-VER_NDK=10e
+VER_CMDLINETOOLS=6200805
 VER_SDK=24.4.1
 VER_AND_BT=23.0.2 # Android build tools version
 VER_AND_API=16    # Target Android API version
@@ -87,8 +94,10 @@ GIT_CLONE="git clone"
 REPO_BASE="https://github.com/uwehermann"
 
 case "$TOOLCHAIN_TRIPLET" in
-  arm*) TARGET_ARCH=armeabi;;
+  arm*) TARGET_ARCH=armeabi-v7a;;
+  aarch64*) TARGET_ARCH=arm64-v8a;;
   i686*) TARGET_ARCH=x86;;
+  x86_64*) TARGET_ARCH=x86_64;;
   *) echo >&2 "Unknown prefix for TOOLCHAIN_TRIPLET."; exit 1;;
 esac
 
@@ -100,23 +109,26 @@ if [ "x$1" = "xprepare" ]; then
   cd $ANDROID_PATH
 
   # NDK
-  $WGET http://dl.google.com/android/ndk/android-ndk-r$VER_NDK-linux-x86.bin
-  chmod 700 android-ndk-r$VER_NDK-linux-x86.bin
-  ./android-ndk-r$VER_NDK-linux-x86.bin -y
+  $WGET https://dl.google.com/android/repository/android-ndk-r$VER_NDK-linux-x86_64.zip
+  unzip -q android-ndk-r$VER_NDK-linux-x86_64.zip
   cd android-ndk-r$VER_NDK
   ./build/tools/make-standalone-toolchain.sh --platform=android-$VER_AND_API \
-    --toolchain=arm-linux-androideabi-4.9 \
-    --install-dir=$ANDROID_PATH/android-arm-toolchain
+    --arch=arm --install-dir=$ANDROID_PATH/android-arm-toolchain_ndk_r21b
   ./build/tools/make-standalone-toolchain.sh --platform=android-$VER_AND_API \
-    --toolchain=x86-4.9 \
-    --install-dir=$ANDROID_PATH/android-i686-toolchain
+    --arch=arm64 --install-dir=$ANDROID_PATH/android-aarch64-toolchain_ndk_r21b
+  ./build/tools/make-standalone-toolchain.sh --platform=android-$VER_AND_API \
+    --arch=x86 --install-dir=$ANDROID_PATH/android-i686-toolchain_ndk_r21b
+  ./build/tools/make-standalone-toolchain.sh --platform=android-$VER_AND_API \
+    --arch=x86_64 --install-dir=$ANDROID_PATH/android-x86_64-toolchain_ndk_r21b
   cd ..
 
   # SDK
-  $WGET http://dl.google.com/android/android-sdk_r$VER_SDK-linux.tgz
-  tar xfz android-sdk_r$VER_SDK-linux.tgz
-  cd android-sdk-linux
-  echo y | ./tools/android update sdk --no-ui --all --filter platform-tools,build-tools-$VER_AND_BT,android-$VER_AND_API
+  $WGET https://dl.google.com/android/repository/commandlinetools-linux-${VER_CMDLINETOOLS}_latest.zip
+  unzip -q commandlinetools-linux-${VER_CMDLINETOOLS}_latest.zip
+  mkdir -p android-sdk-linux_ndk_r21b/cmdline-tools
+  mv tools android-sdk-linux_ndk_r21b/cmdline-tools
+  cd android-sdk-linux_ndk_r21b/cmdline-tools/tools/bin
+  echo y | ./sdkmanager "platform-tools" "platforms;android-$VER_AND_API"
   cd ..
 
   exit
@@ -131,15 +143,15 @@ cd $BUILDDIR
 
 # -----------------------------------------------------------------------------
 
-# Build host Python before we start messing with the environment.
-# Don't do parallel builds, this doesn't seem to work well.
-$WGET http://python.org/ftp/python/$VER_PYTHON/Python-$VER_PYTHON.tar.xz
-tar xfJ Python-$VER_PYTHON.tar.xz
-cd Python-$VER_PYTHON
-./configure
-make python $V
-mv python hostpython
-cd ..
+# # Build host Python before we start messing with the environment.
+# # Don't do parallel builds, this doesn't seem to work well.
+# $WGET http://python.org/ftp/python/$VER_PYTHON/Python-$VER_PYTHON.tar.xz
+# tar xfJ Python-$VER_PYTHON.tar.xz
+# cd Python-$VER_PYTHON
+# ./configure
+# make python $V
+# mv python hostpython
+# cd ..
 
 # -----------------------------------------------------------------------------
 
@@ -168,61 +180,59 @@ else
   CXX="$TOOLCHAIN_TRIPLET-g++ $SYSROOT"
   export CC CXX
 fi
-NDK_TOOLCHAIN_VERSION=`${TOOLCHAIN_TRIPLET}-gcc --version | head -1 | sed -e 's/.* \([0-9]\+\.[0-9.]\+\)\( \|.*\)$/\1/'`
+# NDK_TOOLCHAIN_VERSION=`${TOOLCHAIN_TRIPLET}-gcc --version | head -1 | sed -e 's/.* \([0-9]\+\.[0-9.]\+\)\( \|.*\)$/\1/'`
+# NDK_TOOLCHAIN_VERSION="4.9"
 
 # Define some helper variables.
 C="--host=$TOOLCHAIN_TRIPLET --prefix=$PREFIX"
-CM="$CM -Wno-dev -DCMAKE_TOOLCHAIN_FILE=../android.toolchain.cmake -DANDROID_ABI=${TARGET_ARCH}"
+CM="$CM -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake -DANDROID_PLATFORM=${VER_AND_API} -DANDROID_ABI=${TARGET_ARCH}"
 CM="$CM -DCMAKE_INSTALL_PREFIX=${PREFIX}"
-if [ -n "$STANDALONE_TOOLCHAIN" ]; then
-  CM="$CM -DANDROID_STANDALONE_TOOLCHAIN=${STANDALONE_TOOLCHAIN}"
-  if [ -d "${ANDROID_NDK}/sources/cxx-stl" ]; then
-    CM="$CM -DANDROID_STL_PATH=${ANDROID_NDK}/sources/cxx-stl"
-  fi
-else
-  CM="$CM -DANDROID_NDK=${ANDROID_NDK}"
-  CM="$CM -DANDROID_NATIVE_API_LEVEL=${NATIVE_API_LEVEL}"
-  CM="$CM -DANDROID_TOOLCHAIN_NAME=${TOOLCHAIN_TRIPLET}-${NDK_TOOLCHAIN_VERSION}"
-  CM="$CM -DCMAKE_MAKE_PROGRAM=${ANDROID_NDK}/prebuilt/linux-x86/bin/make"
-fi
+
+# if [ -n "$STANDALONE_TOOLCHAIN" ]; then
+  # CM="$CM -DANDROID_STANDALONE_TOOLCHAIN=${STANDALONE_TOOLCHAIN}"
+  # if [ -d "${ANDROID_NDK}/sources/cxx-stl" ]; then
+  #   CM="$CM -DANDROID_STL_PATH=${ANDROID_NDK}/sources/cxx-stl"
+  # fi
+# else
+#   CM="$CM -DANDROID_NDK=${ANDROID_NDK}"
+#   CM="$CM -DANDROID_NATIVE_API_LEVEL=${NATIVE_API_LEVEL}"
+#   CM="$CM -DANDROID_TOOLCHAIN_NAME=${TOOLCHAIN_TRIPLET}-${NDK_TOOLCHAIN_VERSION}"
+#   CM="$CM -DCMAKE_MAKE_PROGRAM=${ANDROID_NDK}/prebuilt/linux-x86_64/bin/make"
+# fi
 
 # Look for STL, needed to build bindings
-STL_BASE="${ANDROID_NDK}/sources/cxx-stl/gnu-libstdc++/${NDK_TOOLCHAIN_VERSION}"
-if [ -d ${STL_BASE}/include ]; then
-  CPPFLAGS_STL="-I${STL_BASE}/include -I${STL_BASE}/libs/${TARGET_ARCH}/include"
-  LDFLAGS_STL="-L${STL_BASE}/libs/${TARGET_ARCH} -Wl,-rpath=${STL_BASE}/libs/${TARGET_ARCH}"
-  BINDINGS_CONFIG="--enable-bindings"
-else
-  echo "Warning: STL unavailable, libsigrok bindings will not be built."
-  CPPFLAGS_STL=
-  LDFLAGS_STL=
-  BINDINGS_CONFIG="--disable-bindings"
-fi
+# STL_BASE="${ANDROID_NDK}/sources/cxx-stl/gnu-libstdc++/${NDK_TOOLCHAIN_VERSION}"
+# if [ -d ${STL_BASE}/include ]; then
+#   CPPFLAGS_STL="-I${STL_BASE}/include -I${STL_BASE}/libs/${TARGET_ARCH}/include"
+#   LDFLAGS_STL="-L${STL_BASE}/libs/${TARGET_ARCH} -Wl,-rpath=${STL_BASE}/libs/${TARGET_ARCH}"
+#   BINDINGS_CONFIG="--enable-bindings"
+# else
+#   echo "Warning: STL unavailable, libsigrok bindings will not be built."
+#   CPPFLAGS_STL=
+#   LDFLAGS_STL=
+#   BINDINGS_CONFIG="--disable-bindings"
+# fi
 
 # -----------------------------------------------------------------------------
 
 # Get the latest versions of config.guess/config.sub that know about Android.
 $GIT_CLONE http://git.savannah.gnu.org/r/config.git
 
-# Get a toolchain for cmake that knows about Android.
-$WGET https://raw.githubusercontent.com/arithran/android-cmake/master/toolchain/android.toolchain.cmake
-patch < ../android.toolchain.cmake.patch android.toolchain.cmake
-
 # -----------------------------------------------------------------------------
 
-# Python (needed for libsigrokdecode)
-# Don't do parallel Python builds, this doesn't seem to work well.
-cd Python-$VER_PYTHON
-make distclean $V
-autoreconf
-patch -p1 < ../../Python-$VER_PYTHON.patch
-ac_cv_file__dev_ptmx=no ac_cv_file__dev_ptc=no ac_cv_func_pipe2=no ac_cv_func_fdatasync=no ac_cv_func_killpg=no ac_cv_func_waitid=no ac_cv_func_sigaltstack=no ./configure $C --build=x86_64-linux-gnu --disable-ipv6
-sed -i "s/^#zlib/zlib/g" Modules/Setup
-sed -i "s/^#math/math/g" Modules/Setup
-sed -i "s/^#time/time/g" Modules/Setup
-sed -i "s/^#_struct/_struct/g" Modules/Setup
-make PYTHON_FOR_BUILD='_PYTHON_HOST_PLATFORM=$(_PYTHON_HOST_PLATFORM) ./hostpython' install $V
-cd ..
+# # Python (needed for libsigrokdecode)
+# # Don't do parallel Python builds, this doesn't seem to work well.
+# cd Python-$VER_PYTHON
+# make distclean $V
+# autoreconf
+# # patch -p1 < ../../Python-$VER_PYTHON.patch
+# ac_cv_file__dev_ptmx=no ac_cv_file__dev_ptc=no ac_cv_func_pipe2=no ac_cv_func_fdatasync=no ac_cv_func_killpg=no ac_cv_func_waitid=no ac_cv_func_sigaltstack=no ./configure $C --build=x86_64-linux-gnu --disable-ipv6
+# # sed -i "s/^#zlib/zlib/g" Modules/Setup
+# # sed -i "s/^#math/math/g" Modules/Setup
+# # sed -i "s/^#time/time/g" Modules/Setup
+# # sed -i "s/^#_struct/_struct/g" Modules/Setup
+# make PYTHON_FOR_BUILD='_PYTHON_HOST_PLATFORM=$(_PYTHON_HOST_PLATFORM) ./hostpython' install $V
+# cd ..
 
 # libiconv (needed for glib)
 $WGET http://ftp.gnu.org/pub/gnu/libiconv/libiconv-$VER_LIBICONV.tar.gz
@@ -298,9 +308,7 @@ cd ..
 $WGET http://www.nih.at/libzip/libzip-$VER_LIBZIP.tar.gz
 tar xfz libzip-$VER_LIBZIP.tar.gz
 cd libzip-$VER_LIBZIP
-cp -f ../config/config.guess .
-cp -f ../config/config.sub .
-./configure $C
+cmake $CM .
 make $PARALLEL $V
 make install $V
 cd ..
@@ -309,7 +317,7 @@ cd ..
 $WGET http://$SF_MIRROR/project/libusb/libusb-1.0/libusb-$VER_LIBUSB/libusb-$VER_LIBUSB.tar.bz2
 tar xfj libusb-$VER_LIBUSB.tar.bz2
 cd libusb-$VER_LIBUSB
-patch -p1 < ../../libusb-1.0.patch
+# patch -p1 < ../../libusb-1.0.patch
 ./configure $C --disable-udev
 make $PARALLEL $V
 make install $V
